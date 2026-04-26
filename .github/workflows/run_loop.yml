@@ -26,13 +26,11 @@ jobs:
           # បើមាន requirements.txt សូមបន្ថែមបន្ទាត់ខាងក្រោម
           # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Run run.py in infinite loop (5h run + 1min sleep)
+      - name: Run run.py in infinite loop (5h run)
         run: |
           while true; do
             echo "Start: $(date)"
             timeout 5h python run.py
             echo "Finished/Stopped at $(date)"
-            echo "Waiting 60 seconds before restart..."
-            sleep 60
           done
 
