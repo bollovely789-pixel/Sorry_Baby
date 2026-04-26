@@ -1,8 +1,8 @@
 name: Infinite Loop Run Python
 
 on:
-  workflow_dispatch:  # អនុញ្ញាតឱ្យចុច Run manually
-  push:               # (ស្រេចចិត្ត) រត់ដោយស្វ័យប្រវត្តិពេលមាន push
+  workflow_dispatch:
+  push:
 
 jobs:
   loop-job:
@@ -20,7 +20,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          # បើមាន requirements.txt សូមដក # ខាងក្រោមចេញ
+          pip install playwright
+          playwright install chromium  # ដំឡើង Chromium browser
+          # បើមាន requirements.txt សូមបន្ថែមបន្ទាត់ខាងក្រោម
           # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Run run.py in infinite loop (5h run + 1min sleep)
