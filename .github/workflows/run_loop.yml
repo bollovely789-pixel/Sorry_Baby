@@ -23,15 +23,280 @@ jobs:
           pip install playwright requests
           playwright install chromium
 
+      - name: Create fixed run.py (remove V2Ray completely)
+        run: |
+          cat > run_fixed.py << 'EOF'
+          from playwright.sync_api import sync_playwright
+          import json
+          import time
+          import random
+          import os
+          import socket
+          import requests
+          from datetime import datetime
+
+          class YouTubeBotPro:
+              def __init__(self, settings_file="settings.json"):
+                  self.cookies_dir = "cookies"
+                  self.view_duration_min = 41
+                  self.view_duration_max = 60
+                  self.load_settings(settings_file)
+              
+              def load_settings(self, settings_file):
+                  self.settings = {
+                      "total_views": 20,
+                      "view_duration_min": 41,
+                      "view_duration_max": 60,
+                      "wait_between_views_min": 30,
+                      "wait_between_views_max": 60,
+                      "like_chance": 0.3,
+                      "use_v2ray": False,
+                      "headless_mode": True,
+                      "browser_type": "chromium",
+                      "stealth_mode": True,
+                      "random_user_agent": True,
+                      "accounts_file": "working_accounts.txt",
+                      "video_urls_file": "link_video.txt"
+                  }
+                  if os.path.exists(settings_file):
+                      with open(settings_file, 'r') as f:
+                          loaded = json.load(f)
+                          self.settings.update(loaded)
+                  self.view_duration_min = self.settings.get("view_duration_min", 41)
+                  self.view_duration_max = self.settings.get("view_duration_max", 60)
+              
+              def get_proxy_config(self):
+                  return None
+              
+              def check_internet(self):
+                  try:
+                      socket.create_connection(("8.8.8.8", 53), timeout=3)
+                      return True
+                  except OSError:
+                      return False
+
+              def wait_for_internet(self):
+                  print("⚠️ Internet ដាច់! កំពុងរង់ចាំ...")
+                  while not self.check_internet():
+                      time.sleep(5)
+                  print("✅ Internet បានត្រឡប់មកវិញ!")
+
+              def get_random_viewport(self):
+                  viewports = [{'width': 1366, 'height': 768}, {'width': 1920, 'height': 1080}, {'width': 1536, 'height': 864}]
+                  return random.choice(viewports)
+
+              def get_random_timezone(self):
+                  timezones = ['Asia/Bangkok', 'Asia/Phnom_Penh', 'Asia/Tokyo', 'America/New_York']
+                  return random.choice(timezones)
+
+              def get_random_locale(self):
+                  locales = ['en-US', 'en-GB', 'fr-FR']
+                  return random.choice(locales)
+
+              def add_stealth_scripts(self, page):
+                  stealth_script = """
+                  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                  Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                  window.chrome = { runtime: {} };
+                  """
+                  page.add_init_script(stealth_script)
+
+              def random_human_behavior(self, page):
+                  if random.random() > 0.5:
+                      page.mouse.wheel(0, random.randint(100, 500))
+                      time.sleep(random.uniform(0.5, 1))
+
+              def random_mouse_movement(self, page):
+                  for _ in range(random.randint(2, 4)):
+                      page.mouse.move(random.randint(100, 800), random.randint(100, 600))
+                      time.sleep(random.uniform(0.1, 0.3))
+
+              def get_real_user_agent(self):
+                  user_agents = [
+                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+                  ]
+                  return random.choice(user_agents)
+
+              def get_available_accounts(self):
+                  accounts = []
+                  if os.path.exists(self.cookies_dir):
+                      for file in os.listdir(self.cookies_dir):
+                          if file.endswith('.json') and not file.endswith('.session'):
+                              accounts.append(file)
+                  return accounts
+
+              def clean_cookie(self, cookie):
+                  forbidden = ['partitionKey', 'id', 'storeId', 'sameParty']
+                  cleaned = {}
+                  for key, value in cookie.items():
+                      if key not in forbidden:
+                          if key == 'sameSite' and value not in ['Strict', 'Lax', 'None']:
+                              value = 'Lax'
+                          cleaned[key] = value
+                  return cleaned
+
+              def load_cookies(self, context, file):
+                  try:
+                      with open(f"{self.cookies_dir}/{file}", 'r') as f:
+                          cookies = json.load(f)
+                      cleaned = [self.clean_cookie(c) for c in cookies]
+                      context.add_cookies(cleaned)
+                      print(f"🍪 Loaded {len(cleaned)} cookies from {file}")
+                      return True
+                  except Exception as e:
+                      print(f"⚠️ Failed to load cookies: {e}")
+                      return False
+
+              def verify_login(self, page):
+                  try:
+                      page.wait_for_selector("button#avatar-btn", timeout=8000)
+                      print("✓ Logged in successfully")
+                      return True
+                  except:
+                      print("✗ Not logged in")
+                      return False
+
+              def verify_video_playing(self, page):
+                  try:
+                      page.wait_for_selector("video", timeout=10000)
+                      t1 = page.evaluate("() => document.querySelector('video')?.currentTime || 0")
+                      time.sleep(3)
+                      t2 = page.evaluate("() => document.querySelector('video')?.currentTime || 0")
+                      return t2 > t1
+                  except:
+                      return False
+
+              def watch_video(self, page, url, account_name):
+                  duration = random.randint(self.view_duration_min, self.view_duration_max)
+                  print(f"⏱ Watching for {duration} seconds")
+                  
+                  page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                  time.sleep(3)
+                  page.evaluate("() => { const v = document.querySelector('video'); if(v) v.play(); }")
+                  
+                  watched = 0
+                  while watched < duration:
+                      time.sleep(5)
+                      watched += 5
+                      print(f"⏱ Watched: {watched}s/{duration}s")
+                      
+                  if random.random() < self.settings.get("like_chance", 0.3):
+                      try:
+                          page.click("button[aria-label*='like']", timeout=3000)
+                          print(f"👍 Liked video")
+                      except:
+                          pass
+                  
+                  print(f"✅ Finished watching")
+                  return True
+
+              def run_account(self, playwright, account_file, url, view_number):
+                  print(f"\n📱 Using account: {account_file}")
+                  
+                  browser = playwright.chromium.launch(
+                      headless=self.settings.get("headless_mode", True),
+                      args=['--no-sandbox', '--disable-dev-shm-usage']
+                  )
+                  
+                  context = browser.new_context(
+                      viewport=self.get_random_viewport(),
+                      locale=self.get_random_locale(),
+                      timezone_id=self.get_random_timezone(),
+                      user_agent=self.get_real_user_agent()
+                  )
+                  
+                  if not self.load_cookies(context, account_file):
+                      browser.close()
+                      return False
+                  
+                  page = context.new_page()
+                  self.add_stealth_scripts(page)
+                  
+                  page.goto("https://www.youtube.com", timeout=30000)
+                  time.sleep(3)
+                  
+                  if not self.verify_login(page):
+                      browser.close()
+                      return False
+                  
+                  success = self.watch_video(page, url, account_file)
+                  browser.close()
+                  return success
+
+              def get_video_url(self):
+                  file = self.settings.get("video_urls_file", "link_video.txt")
+                  if os.path.exists(file):
+                      with open(file, 'r') as f:
+                          urls = [l.strip() for l in f.readlines() if l.strip()]
+                      for url in urls:
+                          if 'youtu.be' in url or 'youtube.com' in url:
+                              if '?' in url:
+                                  url = url.split('?')[0]
+                              return url
+                  return None
+
+              def get_working_accounts(self):
+                  file = self.settings.get("accounts_file", "working_accounts.txt")
+                  if os.path.exists(file):
+                      with open(file, 'r') as f:
+                          accounts = [l.strip() for l in f.readlines() if l.strip()]
+                      if accounts:
+                          return accounts
+                  return self.get_available_accounts()
+
+              def run(self):
+                  total = self.settings.get("total_views", 20)
+                  print("="*50)
+                  print("🤖 YOUTUBE VIEW BOT")
+                  print("="*50)
+                  
+                  url = self.get_video_url()
+                  if not url:
+                      print("❌ No video URL found in link_video.txt")
+                      return
+                  
+                  accounts = self.get_working_accounts()
+                  if not accounts:
+                      print("❌ No accounts found in cookies/ folder")
+                      return
+                  
+                  print(f"📹 Video: {url}")
+                  print(f"👤 Accounts: {len(accounts)}")
+                  print(f"🎯 Total views: {total}")
+                  
+                  with sync_playwright() as p:
+                      success = 0
+                      for i in range(total):
+                          acc = accounts[i % len(accounts)]
+                          print(f"\n--- View {i+1}/{total} using {acc} ---")
+                          if self.run_account(p, acc, url, i+1):
+                              success += 1
+                          if i < total - 1:
+                              wait = random.randint(30, 60)
+                              print(f"⏳ Waiting {wait}s...")
+                              time.sleep(wait)
+                      
+                      print(f"\n✅ Success: {success}/{total} views")
+
+          if __name__ == "__main__":
+              print("\n" + "="*50)
+              print("📌 YOUTUBE VIEW BOT (No V2Ray)")
+              print("="*50)
+              bot = YouTubeBotPro()
+              bot.run()
+          EOF
+          
+          mv run_fixed.py run.py
+          echo "✅ Created new run.py without V2Ray"
+
       - name: Verify all required files
         run: |
           echo "Checking required files..."
           [ -f link_video.txt ] && echo "✅ link_video.txt" || echo "❌ link_video.txt"
           [ -f settings.json ] && echo "✅ settings.json" || echo "❌ settings.json"
           [ -d cookies ] && echo "✅ cookies folder" || echo "❌ cookies folder"
-          echo "Cookies files:"
-          ls cookies/*.json 2>/dev/null | head -5 || echo "No cookies found"
-          echo "Done checking files."
+          ls cookies/*.json 2>/dev/null | wc -l | xargs echo "Cookies files count:"
 
       - name: Run run.py in infinite loop (5h run + 1min wait)
         run: |
@@ -39,12 +304,9 @@ jobs:
             echo "========================================="
             echo "STARTING BOT AT: $(date)"
             echo "========================================="
-            
             timeout 5h python run.py
-            
             echo "========================================="
             echo "BOT STOPPED AT: $(date)"
             echo "Waiting 60 seconds before restart..."
-            echo "========================================="
             sleep 60
           done
