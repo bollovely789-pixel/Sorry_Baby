@@ -20,8 +20,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install playwright
-          playwright install chromium  # ដំឡើង Chromium browser
+          pip install playwright requests
+          playwright install chromium
           # បើមាន requirements.txt សូមបន្ថែមបន្ទាត់ខាងក្រោម
           # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
