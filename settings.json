@@ -1,0 +1,16 @@
+{
+  "use_v2ray": true,
+  "v2ray_config_pattern": "v2ray_*.json",
+  "total_views": 5000000000000000000000000,
+  "view_duration_min": 600,
+  "view_duration_max": 720,
+  "wait_between_views_min": 5,
+  "wait_between_views_max": 10,
+  "like_chance": 0.01,
+  "headless_mode": true,
+  "browser_type": "firefox",
+  "stealth_mode": true,
+  "accounts_file": "working_accounts.txt",
+  "video_urls_file": "link_video.txt",
+  "cookies_directory": "cookies"
+}
