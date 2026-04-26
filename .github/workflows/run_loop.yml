@@ -1,11 +1,10 @@
-name: Infinite Loop Run Python
+name: Test YouTube Bot
 
 on:
   workflow_dispatch:
-  push:
 
 jobs:
-  loop-job:
+  test-bot:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,380 +20,129 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install playwright requests
-          playwright install chromium playwright firefox webkit
+          playwright install chromium
 
-      - name: Create fixed run.py (remove V2Ray completely)
+      - name: Create simple test script
         run: |
-          cat > run_fixed.py << 'EOF'
+          cat > test_bot.py << 'EOF'
           from playwright.sync_api import sync_playwright
           import json
           import time
-          import random
           import os
-          import socket
-          import requests
-          from datetime import datetime
 
-          class YouTubeBotPro:
-              def __init__(self, settings_file="settings.json"):
-                  self.cookies_dir = "cookies"
-                  self.view_duration_min = 41
-                  self.view_duration_max = 60
-                  self.load_settings(settings_file)
-              
-              def load_settings(self, settings_file):
-                  self.settings = {
-                      "total_views": 20,
-                      "view_duration_min": 41,
-                      "view_duration_max": 60,
-                      "wait_between_views_min": 30,
-                      "wait_between_views_max": 60,
-                      "like_chance": 0.3,
-                      "use_v2ray": False,
-                      "headless_mode": True,
-                      "browser_type": "chromium",
-                      "stealth_mode": True,
-                      "random_user_agent": True,
-                      "accounts_file": "working_accounts.txt",
-                      "video_urls_file": "link_video.txt"
-                  }
-                  if os.path.exists(settings_file):
-                      with open(settings_file, 'r') as f:
-                          loaded = json.load(f)
-                          self.settings.update(loaded)
-                      print(f"✅ Loaded settings from {settings_file}")
-                  else:
-                      print(f"⚠️ {settings_file} not found, using defaults")
-                  
-                  self.view_duration_min = self.settings.get("view_duration_min", 41)
-                  self.view_duration_max = self.settings.get("view_duration_max", 60)
-                  print(f"📺 View duration: {self.view_duration_min}-{self.view_duration_max}s")
-              
-              def get_proxy_config(self):
-                  return None
-              
-              def check_internet(self):
-                  try:
-                      socket.create_connection(("8.8.8.8", 53), timeout=3)
-                      return True
-                  except OSError:
-                      return False
+          print("="*50)
+          print("STARTING SIMPLE TEST")
+          print("="*50)
 
-              def wait_for_internet(self):
-                  print("⚠️ Internet disconnected! Waiting...")
-                  while not self.check_internet():
-                      time.sleep(5)
-                  print("✅ Internet back!")
-
-              def get_random_viewport(self):
-                  viewports = [{'width': 1366, 'height': 768}, {'width': 1920, 'height': 1080}, {'width': 1280, 'height': 720}]
-                  return random.choice(viewports)
-
-              def get_random_timezone(self):
-                  timezones = ['Asia/Bangkok', 'Asia/Phnom_Penh', 'Asia/Tokyo', 'America/New_York', 'Europe/London']
-                  return random.choice(timezones)
-
-              def get_random_locale(self):
-                  locales = ['en-US', 'en-GB', 'en-CA']
-                  return random.choice(locales)
-
-              def add_stealth_scripts(self, page):
-                  stealth_script = """
-                  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                  Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-                  Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-                  window.chrome = { runtime: {} };
-                  """
-                  page.add_init_script(stealth_script)
-
-              def random_human_behavior(self, page):
-                  if random.random() > 0.6:
-                      page.mouse.wheel(0, random.randint(100, 500))
-                      time.sleep(random.uniform(0.5, 1))
-
-              def random_mouse_movement(self, page):
-                  for _ in range(random.randint(2, 4)):
-                      page.mouse.move(random.randint(100, 800), random.randint(100, 600))
-                      time.sleep(random.uniform(0.1, 0.3))
-
-              def get_real_user_agent(self):
-                  user_agents = [
-                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-                  ]
-                  return random.choice(user_agents)
-
-              def get_available_accounts(self):
-                  accounts = []
-                  if os.path.exists(self.cookies_dir):
-                      for file in os.listdir(self.cookies_dir):
-                          if file.endswith('.json') and not file.endswith('.session'):
-                              accounts.append(file)
-                  return accounts
-
-              def clean_cookie(self, cookie):
-                  forbidden = ['partitionKey', 'id', 'storeId', 'sameParty', 'partitionKeyPercentEncoded']
-                  cleaned = {}
-                  for key, value in cookie.items():
-                      if key not in forbidden:
-                          if key == 'sameSite' and value not in ['Strict', 'Lax', 'None']:
-                              value = 'Lax'
-                          cleaned[key] = value
-                  return cleaned
-
-              def load_cookies(self, context, file):
-                  try:
-                      with open(f"{self.cookies_dir}/{file}", 'r') as f:
-                          cookies = json.load(f)
-                      cleaned = [self.clean_cookie(c) for c in cookies]
-                      context.add_cookies(cleaned)
-                      print(f"🍪 Loaded {len(cleaned)} cookies from {file}")
-                      return True
-                  except Exception as e:
-                      print(f"⚠️ Failed to load cookies from {file}: {e}")
-                      return False
-
-              def verify_login(self, page):
-                  try:
-                      page.wait_for_selector("button#avatar-btn, ytd-topbar-menu-button-renderer button", timeout=10000)
-                      print("✅ Login verified!")
-                      return True
-                  except Exception as e:
-                      print(f"❌ Login failed: {e}")
-                      return False
-
-              def verify_video_playing(self, page):
-                  try:
-                      page.wait_for_selector("video", timeout=10000)
-                      t1 = page.evaluate("() => document.querySelector('video')?.currentTime || 0")
-                      time.sleep(3)
-                      t2 = page.evaluate("() => document.querySelector('video')?.currentTime || 0")
-                      if t2 > t1:
-                          print(f"▶️ Video playing: {t1:.1f}s -> {t2:.1f}s")
-                          return True
-                      else:
-                          page.evaluate("() => { const v = document.querySelector('video'); if(v) v.play(); }")
-                          return True
-                  except Exception as e:
-                      print(f"⚠️ Video check error: {e}")
-                      return False
-
-              def watch_video(self, page, url, account_name):
-                  duration = random.randint(self.view_duration_min, self.view_duration_max)
-                  print(f"⏱️ Watching for {duration} seconds")
-                  
-                  print(f"📺 Opening video: {url}")
-                  page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                  time.sleep(3)
-                  
-                  # Try to play video
-                  page.evaluate("() => { const v = document.querySelector('video'); if(v) v.play(); }")
-                  time.sleep(2)
-                  
-                  # Verify playing
-                  self.verify_video_playing(page)
-                  
-                  watched = 0
-                  while watched < duration:
-                      time.sleep(5)
-                      watched += 5
-                      print(f"⏱️ Watched: {min(watched, duration)}s/{duration}s")
-                      
-                      # Random human behavior
-                      if random.random() > 0.7:
-                          self.random_human_behavior(page)
-                  
-                  # Random like
-                  if random.random() < self.settings.get("like_chance", 0.3):
-                      try:
-                          page.click("button[aria-label*='like']", timeout=3000)
-                          print(f"👍 Liked video!")
-                      except:
-                          pass
-                  
-                  print(f"✅ Finished watching video!")
-                  return True
-
-              def run_account(self, playwright, account_file, url, view_number):
-                  print(f"\n{'='*40}")
-                  print(f"📱 Account: {account_file}")
-                  print(f"🎯 View: {view_number}")
-                  print(f"{'='*40}")
-                  
-                  # Launch browser
-                  browser_type = self.settings.get("browser_type", "chromium")
-                  print(f"🌐 Launching {browser_type} browser...")
-                  
-                  if browser_type == "chromium":
-                      browser = playwright.chromium.launch(
-                          headless=self.settings.get("headless_mode", True),
-                          args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled']
-                      )
-                  elif browser_type == "firefox":
-                      browser = playwright.firefox.launch(
-                          headless=self.settings.get("headless_mode", True),
-                          args=['--no-sandbox']
-                      )
-                  else:
-                      browser = playwright.webkit.launch(
-                          headless=self.settings.get("headless_mode", True)
-                      )
-                  
-                  # Create context
-                  context = browser.new_context(
-                      viewport=self.get_random_viewport(),
-                      locale=self.get_random_locale(),
-                      timezone_id=self.get_random_timezone(),
-                      user_agent=self.get_real_user_agent()
-                  )
-                  
-                  # Load cookies
-                  if not self.load_cookies(context, account_file):
-                      browser.close()
-                      return False
-                  
-                  # Create page
-                  page = context.new_page()
-                  self.add_stealth_scripts(page)
-                  
-                  # Go to YouTube
-                  print("🌐 Opening YouTube...")
-                  page.goto("https://www.youtube.com", timeout=30000)
-                  time.sleep(3)
-                  
-                  # Verify login
-                  if not self.verify_login(page):
-                      print(f"❌ Account {account_file} not logged in properly")
-                      browser.close()
-                      return False
-                  
-                  # Watch video
-                  success = self.watch_video(page, url, account_file)
-                  
-                  # Cleanup
-                  browser.close()
-                  return success
-
-              def get_video_url(self):
-                  video_file = self.settings.get("video_urls_file", "link_video.txt")
-                  if os.path.exists(video_file):
-                      with open(video_file, 'r') as f:
-                          urls = [line.strip() for line in f.readlines() if line.strip()]
-                      for url in urls:
-                          if 'youtu.be' in url or 'youtube.com' in url:
-                              if '?' in url:
-                                  url = url.split('?')[0]
-                              print(f"📹 Found video URL: {url}")
-                              return url
-                  print(f"❌ No valid YouTube URL found in {video_file}")
-                  return None
-
-              def get_working_accounts(self):
-                  accounts_file = self.settings.get("accounts_file", "working_accounts.txt")
-                  if os.path.exists(accounts_file):
-                      with open(accounts_file, 'r') as f:
-                          accounts = [line.strip() for line in f.readlines() if line.strip()]
-                      if accounts:
-                          print(f"📋 Using {len(accounts)} accounts from {accounts_file}")
-                          return accounts
-                  
-                  all_accounts = self.get_available_accounts()
-                  print(f"📋 Found {len(all_accounts)} accounts in cookies/ folder")
-                  return all_accounts
-
-              def run(self):
-                  total_views = self.settings.get("total_views", 20)
-                  print("="*50)
-                  print("🤖 YOUTUBE VIEW BOT (No V2Ray)")
-                  print("="*50)
-                  print(f"🎯 Target: {total_views} views")
-                  print(f"🛡️ Stealth mode: {self.settings.get('stealth_mode', True)}")
-                  print(f"🌐 Browser: {self.settings.get('browser_type', 'chromium')}")
-                  print("="*50)
-                  
-                  # Get video URL
-                  video_url = self.get_video_url()
-                  if not video_url:
-                      print("❌ Cannot continue without video URL")
-                      return
-                  
-                  # Get accounts
-                  accounts = self.get_working_accounts()
-                  if not accounts:
-                      print("❌ No accounts found!")
-                      return
-                  
-                  print(f"\n📋 Available accounts: {len(accounts)}")
-                  for i, acc in enumerate(accounts[:5], 1):
-                      print(f"   {i}. {acc}")
-                  if len(accounts) > 5:
-                      print(f"   ... and {len(accounts)-5} more")
-                  
-                  print("\n🚀 Starting bot...")
-                  print("="*50)
-                  
-                  with sync_playwright() as p:
-                      success = 0
-                      fail = 0
-                      
-                      for i in range(total_views):
-                          account = accounts[i % len(accounts)]
-                          print(f"\n{'#'*50}")
-                          print(f"📊 VIEW {i+1}/{total_views}")
-                          print(f"{'#'*50}")
-                          
-                          result = self.run_account(p, account, video_url, i+1)
-                          
-                          if result:
-                              success += 1
-                              print(f"✅ View {i+1} SUCCESS!")
-                          else:
-                              fail += 1
-                              print(f"❌ View {i+1} FAILED!")
-                          
-                          # Wait between views
-                          if i < total_views - 1:
-                              wait = random.randint(30, 60)
-                              print(f"\n⏳ Waiting {wait} seconds before next view...")
-                              time.sleep(wait)
-                      
-                      print("\n" + "="*50)
-                      print("📊 FINAL RESULTS")
-                      print("="*50)
-                      print(f"✅ Success: {success}/{total_views}")
-                      print(f"❌ Failed: {fail}/{total_views}")
-                      print(f"📈 Success rate: {(success/total_views)*100:.1f}%")
-                      print("="*50)
-
-          if __name__ == "__main__":
-              print("\n" + "="*50)
-              print("🚀 STARTING YOUTUBE VIEW BOT")
-              print("="*50)
-              bot = YouTubeBotPro()
-              bot.run()
-          EOF
+          # Check files
+          print("\n1. Checking files...")
+          print(f"   link_video.txt exists: {os.path.exists('link_video.txt')}")
+          print(f"   settings.json exists: {os.path.exists('settings.json')}")
+          print(f"   cookies folder exists: {os.path.exists('cookies')}")
           
-          mv run_fixed.py run.py
-          chmod +x run.py
-          echo "✅ Created new run.py"
+          if os.path.exists('cookies'):
+              cookies_files = [f for f in os.listdir('cookies') if f.endswith('.json')]
+              print(f"   Cookies files: {cookies_files[:5]}")
+          
+          # Read video URL
+          print("\n2. Reading video URL...")
+          video_url = None
+          if os.path.exists('link_video.txt'):
+              with open('link_video.txt', 'r') as f:
+                  lines = [l.strip() for l in f.readlines() if l.strip()]
+              for line in lines:
+                  if 'youtube.com' in line or 'youtu.be' in line:
+                      video_url = line.split('?')[0]
+                      print(f"   Found: {video_url}")
+                      break
+          
+          if not video_url:
+              print("   ERROR: No YouTube URL found!")
+              exit(1)
+          
+          # Launch browser
+          print("\n3. Launching browser...")
+          with sync_playwright() as p:
+              browser = p.chromium.launch(
+                  headless=True,
+                  args=['--no-sandbox', '--disable-dev-shm-usage']
+              )
+              print("   Browser launched!")
+              
+              context = browser.new_context(
+                  viewport={'width': 1280, 'height': 720},
+                  user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              )
+              print("   Context created!")
+              
+              # Try to load first account cookie
+              account_file = None
+              if os.path.exists('cookies'):
+                  for f in os.listdir('cookies'):
+                      if f.endswith('.json') and not f.endswith('.session'):
+                          account_file = f
+                          break
+              
+              if account_file:
+                  print(f"   Loading cookies from: {account_file}")
+                  with open(f'cookies/{account_file}', 'r') as f:
+                      cookies = json.load(f)
+                  context.add_cookies(cookies)
+                  print(f"   Loaded {len(cookies)} cookies")
+              
+              page = context.new_page()
+              print("   Page created!")
+              
+              # Go to YouTube
+              print("\n4. Going to YouTube...")
+              page.goto('https://www.youtube.com', timeout=30000)
+              print("   YouTube loaded!")
+              time.sleep(3)
+              
+              # Check login
+              print("\n5. Checking login status...")
+              try:
+                  if page.locator("button#avatar-btn").count() > 0:
+                      print("   ✅ Logged in!")
+                  else:
+                      print("   ⚠️ Not logged in or cookies expired")
+              except:
+                  print("   ⚠️ Could not verify login")
+              
+              # Go to video
+              print(f"\n6. Going to video: {video_url}")
+              page.goto(video_url, timeout=30000)
+              print("   Video page loaded!")
+              time.sleep(5)
+              
+              # Try to play video
+              print("\n7. Trying to play video...")
+              try:
+                  page.evaluate("() => { const v = document.querySelector('video'); if(v) v.play(); }")
+                  print("   Play command sent!")
+              except Exception as e:
+                  print(f"   Error: {e}")
+              
+              # Watch for 30 seconds
+              print("\n8. Watching for 30 seconds...")
+              for i in range(6):
+                  time.sleep(5)
+                  print(f"   Watching... {i*5+5}s/30s")
+                  
+                  # Check if video is playing
+                  try:
+                      current_time = page.evaluate("() => document.querySelector('video')?.currentTime || 0")
+                      print(f"      Current time: {current_time:.1f}s")
+                  except:
+                      pass
+              
+              print("\n9. Closing browser...")
+              browser.close()
+              
+              print("\n" + "="*50)
+              print("✅ TEST COMPLETED SUCCESSFULLY!")
+              print("="*50)
+          EOF
 
-      - name: Test run once (debug)
-        run: |
-          echo "========== TEST RUN =========="
-          python run.py
-          echo "========== TEST FINISHED =========="
-
-      - name: Run run.py in infinite loop (5h run + 1min wait)
-        run: |
-          while true; do
-            echo "========================================="
-            echo "STARTING BOT AT: $(date)"
-            echo "========================================="
-            timeout 5h python run.py 2>&1
-            EXIT_CODE=$?
-            echo "========================================="
-            echo "BOT STOPPED AT: $(date) (Exit code: $EXIT_CODE)"
-            echo "Waiting 60 seconds before restart..."
-            sleep 60
-          done
+      - name: Run test
+        run: python test_bot.py
