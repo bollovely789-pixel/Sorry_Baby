@@ -34,3 +34,4 @@ jobs:
             echo "Waiting 60 seconds before restart..."
             sleep 60
           done
+
