@@ -1,0 +1,34 @@
+name: Infinite Loop Run Python
+
+on:
+  workflow_dispatch:  # អនុញ្ញាតឱ្យចុច Run manually
+  push:               # (ស្រេចចិត្ត) រត់ដោយស្វ័យប្រវត្តិពេលមាន push
+
+jobs:
+  loop-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          # បើមាន requirements.txt សូមដក # ខាងក្រោមចេញ
+          # if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run run.py in infinite loop (5h run + 1min sleep)
+        run: |
+          while true; do
+            echo "Start: $(date)"
+            timeout 5h python run.py
+            echo "Finished/Stopped at $(date)"
+            echo "Waiting 60 seconds before restart..."
+            sleep 60
+          done
