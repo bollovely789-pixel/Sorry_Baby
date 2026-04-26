@@ -1,5 +1,4 @@
 name: Infinite Loop Run Python
-
 on:
   workflow_dispatch:
   push:
