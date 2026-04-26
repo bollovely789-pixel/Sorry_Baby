@@ -1,5 +1,5 @@
 {
-  "use_v2ray": true,
+  "use_v2ray": false,
   "v2ray_config_pattern": "v2ray_*.json",
   "total_views": 5000000000000000000000000,
   "view_duration_min": 600,
