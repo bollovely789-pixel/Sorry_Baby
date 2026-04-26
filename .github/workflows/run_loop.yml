@@ -1,4 +1,5 @@
 name: Infinite Loop Run Python
+
 on:
   workflow_dispatch:
   push:
@@ -22,26 +23,15 @@ jobs:
           pip install playwright requests
           playwright install chromium
 
-      - name: Install V2Ray
-        run: |
-          # Download V2Ray core
-          curl -L https://github.com/v2fly/v2ray-core/releases/latest/download/v2ray-linux-64.zip -o v2ray.zip
-          unzip -o v2ray.zip -d v2ray-core/
-          sudo mv v2ray-core/v2ray /usr/local/bin/
-          sudo mv v2ray-core/v2ctl /usr/local/bin/
-          sudo chmod +x /usr/local/bin/v2ray /usr/local/bin/v2ctl
-          mkdir -p ~/.v2ray
-          echo "V2Ray installed successfully"
-          v2ray --version
-
       - name: Verify all required files
         run: |
           echo "Checking required files..."
           [ -f link_video.txt ] && echo "✅ link_video.txt" || echo "❌ link_video.txt"
           [ -f settings.json ] && echo "✅ settings.json" || echo "❌ settings.json"
           [ -d cookies ] && echo "✅ cookies folder" || echo "❌ cookies folder"
-          ls cookies/*.json 2>/dev/null | head -5
-          ls v2ray_*.json 2>/dev/null | head -5
+          echo "Cookies files:"
+          ls cookies/*.json 2>/dev/null | head -5 || echo "No cookies found"
+          echo "Done checking files."
 
       - name: Run run.py in infinite loop (5h run + 1min wait)
         run: |
@@ -50,20 +40,11 @@ jobs:
             echo "STARTING BOT AT: $(date)"
             echo "========================================="
             
-            # Run with V2Ray support
             timeout 5h python run.py
             
-            EXIT_CODE=$?
             echo "========================================="
-            echo "BOT STOPPED AT: $(date) (Exit code: $EXIT_CODE)"
+            echo "BOT STOPPED AT: $(date)"
+            echo "Waiting 60 seconds before restart..."
             echo "========================================="
-            
-            if [ $EXIT_CODE -eq 124 ]; then
-              echo "✓ Bot ran for full 5 hours (timeout)"
-            else
-              echo "⚠️ Bot stopped early with exit code $EXIT_CODE"
-            fi
-            
-            echo "Waiting 60 seconds before next round..."
             sleep 60
           done
